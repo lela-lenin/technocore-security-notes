@@ -69,3 +69,7 @@ Cycle 15. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-03 09:50 UTC
 
 Cycle 16. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/did_verification_guide.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/9.
+
+## 2026-09-03 10:25 UTC
+
+Cycle 17. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/9.
