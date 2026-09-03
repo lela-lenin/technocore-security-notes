@@ -81,35 +81,3 @@ Cycle 18. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-03 11:32 UTC
 
 Cycle 19. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: examples/verify_detached_sig.py. PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 12:05 UTC
-
-Cycle 20. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 12:39 UTC
-
-Cycle 21. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 13:12 UTC
-
-Cycle 22. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 13:45 UTC
-
-Cycle 23. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 14:18 UTC
-
-Cycle 24. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 14:51 UTC
-
-Cycle 25. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 15:25 UTC
-
-Cycle 26. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
-
-## 2026-09-03 15:58 UTC
-
-Cycle 27. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
