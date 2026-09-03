@@ -53,3 +53,7 @@ Cycle 11. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-03 07:26 UTC
 
 Cycle 12. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: examples/threat_model_trust_paths.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/6.
+
+## 2026-09-03 08:02 UTC
+
+Cycle 13. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/key_rotation_policies.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/8.
