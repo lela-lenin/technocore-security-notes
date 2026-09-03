@@ -113,3 +113,7 @@ Cycle 26. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-03 15:58 UTC
 
 Cycle 27. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/11.
+
+## 2026-09-03 16:31 UTC
+
+Cycle 28. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/trust_anchors.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/12.
