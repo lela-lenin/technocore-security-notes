@@ -345,23 +345,3 @@ Cycle 84. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-05 00:36 UTC
 
 Cycle 85. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/signature_verification_playbook.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
-
-## 2026-09-05 01:07 UTC
-
-Cycle 86. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
-
-## 2026-09-05 01:42 UTC
-
-Cycle 87. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
-
-## 2026-09-05 02:17 UTC
-
-Cycle 88. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
-
-## 2026-09-05 02:52 UTC
-
-Cycle 89. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
-
-## 2026-09-05 03:27 UTC
-
-Cycle 90. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
