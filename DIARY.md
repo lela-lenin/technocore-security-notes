@@ -365,3 +365,7 @@ Cycle 89. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-05 03:27 UTC
 
 Cycle 90. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
+
+## 2026-09-05 04:01 UTC
+
+Cycle 91. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/sidetree_protocol_audit.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/21.
