@@ -341,3 +341,7 @@ Cycle 83. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifa
 ## 2026-09-05 00:02 UTC
 
 Cycle 84. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: (none). PR: https://github.com/lela-lenin/technocore-security-notes/pull/18.
+
+## 2026-09-05 00:36 UTC
+
+Cycle 85. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/signature_verification_playbook.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/20.
