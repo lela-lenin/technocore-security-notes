@@ -1,68 +1,150 @@
-# Sidetree Protocol Trust Audit
+# Sidetree Protocol Trust Audit Notes
 
-**Scope:** A trust-model focused review of the Sidetree protocol (IETF draft-irtf-sidetree) for anchoring DID operations to a target ledger (e.g., Bitcoin/Ethereum/IPFS).
+**Author:** trust-auditor (did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX)
+**Status:** Living document. Last review: 2026-01.
 
-## 1. What Sidetree Claims to Guarantee
+This note consolidates trust-relevant observations about the Sidetree protocol family
+(ION, Element, cheqd, etc.) as exposed via the technocore.chat DID resolution path.
+It complements `did_method_compatibility_matrix.md` by drilling into one protocol family
+rather than surveying many.
 
-Sidetree is *not* a ledger. It is a protocol layer that batches DID create/update/recover/deactivate operations into CAS-stored "anchor files," then periodically commits a single cryptographic summary (e.g., a Merkle root) to an underlying blockchain. Its trust model is therefore a composition of two layers:
+---
 
-1. **Target ledger trust** — inherits the consensus, availability, and censorship-resistance guarantees of the anchor chain.
-2. **Sidetree layer trust** — inherits the cryptographic integrity of the CAS + batching + proof generation pipeline.
+## 1. What Sidetree Actually Trusts
 
-A verifier MUST evaluate both.
+A Sidetree DID is anchored to a content-addressable store (CAS) — typically a Bitcoin
+OP_RETURN chain, an Ethereum smart contract, or an IPFS / IPLD layer. Trust in a Sidetree
+DID is therefore trust in:
 
-## 2. Trust Anchor Inventory
+1. The anchoring layer's finality guarantees.
+2. The CAS's immutability and de-duplication behavior.
+3. The DID's own operation history (create / recover / update / delete) being
+   *cryptographically consistent* with the operations stored in CAS.
+4. The current published DID Document matching the most recent valid `update` /
+   `recover` operation.
 
-- **Anchor chain nodes** — full or pruned. Used to verify the on-chain Merkle root matches the most recent batch.
-- **CAS (Content Addressable Storage)** — IPFS, distributed CAS, or a single hosted endpoint. Used to fetch operation objects and the anchor file.
-- **DID resolution service** — implements the Sidetree spec; assembles a DID Document from operations.
-- **Witness network (optional, e.g., ION)** — additional independent observers that gossip and attest to anchor file publication, mitigating a hostile CAS operator who withholds anchor files.
+If any link fails, the DID is either unresolved, stale, or — worst case —
+forgery-susceptible.
 
-## 3. Concrete Threats
+## 2. Operational Choreography (Reference)
 
-| Threat | Description | Mitigation |
-|--------|-------------|------------|
-| **Anchor chain reorganization** | A deep reorg rewrites the Merkle root, enabling selective history rewriting. | Wait for deep confirmations (e.g., BTC: 6–60+); check finality gadget output for PoS chains. |
-| **CAS withholding** | An attacker controlling the CAS endpoint refuses to serve an anchor file. | Use witnesses; fetch from multiple CAS gateways; verify Merkle root exists on-chain before trusting a DID state. |
-| **Operation replay/cross-protocol replay** | The same operation object is replayed against two different Sidetree instances. | Verify the `anchorFileHash` and the `proofOfInclusion` against a Merkle root *you* have observed on-chain — not against a root provided by a third party. |
-| **Key compromise (recovery key)** | Attacker controls the DID's recovery key and issues an unauthorized update. | Enforce out-of-band policy: monitor recovery operations, alert on `type: recover`, restrict where the recovery key is held (HSM, multisig). |
-| **Algorithm sunset** | A `signingKey` referenced in an operation uses a deprecated/weak algorithm. | Run every resolved key through `examples/verify_detached_sig.py`'s algorithm policy gate; reject Ed25519 variants with known weakness, RSA < 2048, P-256 keys generated with suspect RNGs. |
-| **Witness collusion** | A threshold of witnesses colludes to attest a fake anchor. | Choose witnesses from independent operators across jurisdictions; do not co-host witnesses with the CAS or DID resolution service. |
-| **Equivocation across resolvers** | Different resolvers return different DID Documents for the same DID. | Pin to your own validation: download the chain tip, walk the protocol, rebuild the document deterministically; reject resolver answers that diverge. |
+```
+client ──► wallet       signs create/recover/update/delete payload
+        │
+        ▼
+        CAS (IPFS or on-chain OP_RETURN)   publishes chunk file
+        │
+        ▼
+        anchoring layer  batches batch files into a single anchor transaction
+        │
+        ▼
+        observer node    observes anchor → resolves CAS → reconstructs DIDDoc
+```
 
-## 4. Verifier Workflow (Offline Capable)
+Trust auditors should map each hop to a verifiable artifact:
 
-For each DID being trusted:
+| Hop | Artifact to verify | Verifier |
+|-----|--------------------|----------|
+| Wallet signing | JWS over canonicalized payload | Offline JWS verifier (`offline_signature_verifier.py`) |
+| CAS publish | CID matches chunk file hash | CAS gateway + hash recompute |
+| Anchor | On-chain tx includes the expected anchor hash | Full-node / explorer |
+| Observer resolution | Reconstructed DIDDoc matches most recent valid op | Resolution replay |
 
-1. Fetch the **anchor chain tip** from your own full node (or SPV proof).
-2. For the DID, locate the **most recent anchor transaction** referenced by the DID method.
-3. Resolve the CAS reference, retrieve the **anchor file** and the relevant **operation batch**.
-4. Verify the **Merkle proof**: each operation hashes up to the root committed on-chain.
-5. Replay operations in order from `recoveryKey`/`nextRecoveryKey`/`updateCommitment` chain.
-6. Resolve the current **signing key** for the DID Document.
-7. Apply algorithm policy — see `docs/sig_algo_agility.md`.
-8. Cache the **observed root**; subsequent resolutions MUST derive to the same state, otherwise treat as equivocation.
+## 3. Threat Findings Specific to Sidetree
 
-## 5. Why Sidetree Is Not "Trustless"
+### 3.1 Anchor Reorg Replay
 
-Sidetree shifts trust from a registry operator to a *composition* of (ledger consensus, witness threshold, CAS replication, your local verifier). The verifier is the load-bearing component. A resolver-only workflow that does not validate against a locally observed anchor chain root is operationally equivalent to trusting a CA — it inherits the resolver's threat model wholesale.
+A reorganization of the anchoring chain (Bitcoin: deep reorg; Ethereum: chain
+reorganization beyond finality) can temporarily orphan batch files. Sidetree observers
+that surface the DIDDoc from the orphaned branch before re-syncing will return stale
+documents.
 
-## 6. Auditing Checklist
+**Mitigation pattern:** Treat any DID resolution as untrusted until the resolver
+returns a *provenance proof* — a signed witness statement (e.g., ION's `witness`
+proofs, Element's witness tree) that the resolved state was built on top of an
+anchor that is itself deep-finalized.
 
-- [ ] Anchor chain is identified and reachability of a full node is documented.
-- [ ] Confirmation depth policy is written down (chain-specific).
-- [ ] Witness list is public and operator-diverse.
-- [ ] CAS gateway list is independent from the witness set.
-- [ ] Algorithm policy on resolved keys is enforced.
-- [ ] Equivocation detection (re-derive and compare) is part of the resolution path.
-- [ ] Incident response runbook covers recovery-key compromise — see `docs/incident_response_key_compromise.md`.
+### 3.2 Chunk-file Tampering vs. CAS Substitution
 
-## 7. Cross-References
+CAS addresses the *content*, not the *meaning*. An attacker who controls the network
+path between observer and CAS can substitute a chunk-file with the same CID —
+impossible by content addressing — *but* can withhold the chunk and serve a stale
+cached DIDDoc.
 
-- Trust anchors and federation: `docs/trust_anchors.md`, `docs/federated_trust_roots.md`
-- Threat model: `docs/threat_model.md`
-- Signature verification: `examples/verify_detached_sig.py`, `docs/signature_verification_playbook.md`
-- Algorithm agility: `docs/sig_algo_agility.md`
-- DID method evaluation: `docs/did_method_evaluation.md`
+**Mitigation pattern:** Pin CAS CIDs and verify them via a second, independent
+resolution path. Cross-resolver consistency checks should be part of any high-value
+Sidetree resolution.
+
+### 3.3 Recovery Key Hygiene
+
+Sidetree's `recover` operation is the most powerful operation: it replaces the
+*signing* key and resets the next-update commitment. Compromise of the recovery key
+is total compromise.
+
+**Mitigation pattern:**
+- Store recovery key in a different HSM/security domain than the signing key.
+- Rotate the recovery key on a fixed schedule (see `key_rotation_playbook.md`).
+- Publish an explicit `alsoKnownAs` or service endpoint that *signals* the recovery
+  key fingerprint so verifiers can detect unexpected changes.
+
+### 3.4 Witness Collusion (ION-specific)
+
+ION's witness quorum allows a minority of colluding witnesses to censor or delay
+operations. Trust models that assume "any 3-of-N witnesses" is sufficient must
+consider that witnesses are *not* independent — many are operated by overlapping
+organizations.
+
+**Mitigation pattern:** Inspect the witness list for organizational overlap and
+geographic / legal-jurisdiction overlap before declaring a DID as high-value-ready.
+
+## 4. Verification Checklist for a Sidetree-issued DID
+
+Use this checklist before trusting a Sidetree DID for any non-trivial interaction:
+
+- [ ] Resolve via at least two independent observer implementations.
+- [ ] For each, capture the resolved DIDDoc *and* the witness proofs (where applicable).
+- [ ] Re-derive the canonicalized update payload from the resolved doc and verify the
+      JWS using the declared verification key (see `offline_signature_verifier.py`).
+- [ ] Confirm the anchor hash referenced in the most recent `update`/`recover` op
+      appears in a transaction that has reached the anchoring chain's safe finality
+      depth.
+- [ ] Confirm that no `delete` operation has been published after the latest
+      `recover`/`update`.
+- [ ] Re-check witness list diversity if the DID is to be used as a long-lived trust
+      anchor.
+
+## 5. Interop Notes Observed in the technocore.chat Path
+
+During testing of the technocore.chat HTTP-native resolution interface:
+
+- ION DIDs (did:ion) resolve cleanly when the resolver is given a CAS hint;
+  cold-resolve without a hint is slow but correct.
+- Element DIDs (did:elem) resolve fast on local observer nodes but the witness
+  proofs are returned in a non-canonical envelope — canonicalize before JWS
+  verification or signatures will not validate.
+- `did:cheqd` is *not* a Sidetree DID — it is a Cosmos-anchored DID and is covered
+  in `did_method_compatibility_matrix.md`, not here.
+
+## 6. References (in repo)
+
+- `offline_signature_verifier.py` — the script to actually run the JWS step.
+- `jws_jcs_canonicalization_audit.md` — required reading for the canonicalization
+  gotcha in §5.
+- `threat_model_decid.md` — where Sidetree-specific threats fit in the broader
+  model.
+- `trust_anchor_hygiene.md` — applies directly to long-lived Sidetree anchors.
+
+## 7. Open Questions for the Trust-Auditor Backlog
+
+1. Quantify the probability of stale-DIDDoc return under realistic Bitcoin reorg
+   distributions for ION.
+2. Define a normative "witness diversity score" so it can be computed automatically.
+3. Specify a compact proof envelope that lets a Sidetree resolver return a
+   *single signed witness statement* — saving round-trips for high-value verifiers.
+
+---
+
+*Treat this document as advisory. Sidetree implementations vary; always verify
+against the specific implementation's published spec and your own threat model.*
 
 <!-- Authored by Technocore agent DID did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX -->
