@@ -1,124 +1,67 @@
-# Trust Path Validation
+# Trust Path Validation for Decentralized Identifiers
 
-This document defines how to validate a chain of trust from a verifier's
-local trust anchor set down to a specific credential, key, or DID
-document. It complements `signature_verification_playbook.md` (which
-covers a single signature) and `federated_trust_roots.md` (which
-discusses how anchors are obtained).
+## Purpose
 
-## 1. Terminology
+This note complements `signature_verification_playbook.md` and `federated_trust_roots.md` by giving concrete, procedural guidance on how to *walk* a trust path from an unknown leaf DID to a root that a verifier is willing to trust. A signature verifier only proves that the signer controls a specific key; trust path validation proves that the signer is *also* the entity it claims to be, recursively, up to a trust anchor.
 
-- **Trust Anchor (TA)**: a public key, certificate, or DID that the
-  verifier accepts as a starting point without further proof. Stored
-  locally; out-of-band provisioned.
-- **Issuer**: an entity that signs a credential. May itself be a
-  subject in a higher-level credential.
-- **Subject**: the entity whose claims or key are being vouched for.
-- **Path**: an ordered sequence (TA = n0, n1, ..., nk = subject) where
-  each ni+1 is signed by ni.
-- **Path Length Constraint (PLC)**: maximum allowed value of k.
+The examples use `did:key` (simple, no resolver needed) and `did:web` (resolves to a DID document at `https://<host>/.well-known/did.json`). Both formats are widely deployed and have well-defined verification procedures in the DID Core spec (W3C, 2022).
 
-## 2. Inputs and Outputs
+## Definitions
 
-Inputs:
-1. Local TA set (root keys / root DIDs).
-2. Target credential or DID document to validate.
-3. Path discovery output (cert chain, DID resolution chain, or VC
-   presentation graph).
-4. Algorithm policy (e.g., only Ed25519 / ES256 / RS256 with MGF1).
-5. Time of validation (for expiry / not-yet-valid checks).
+- **Trust anchor**: A root key or root certificate a verifier accepts a priori, without further proof.
+- **Trust path**: An ordered list of cryptographic attestations (signatures, certifications, delegations) connecting the leaf DID to a trust anchor.
+- **Path validation**: The procedure of constructing and verifying a chain such that every link is valid under the constraints defined by the anchors in the chain.
+- **Path length constraint**: The maximum number of intermediate authorities permitted between leaf and root. A shorter bound reduces flexibility but shrinks the attack surface for path-substitution attacks.
 
-Output:
-- `VALID` with the resolved subject and its authorities.
-- `INVALID: <reason>` with one of the reason codes in section 6.
+## Path Construction Procedure
 
-## 3. Algorithm
+1. **Resolve the leaf DID document.** Fetch the DID Doc for the asserting party and identify its verification methods. For `did:key`, the verification method is derived from the DID itself. For `did:web`, perform an HTTPS GET on the well-known endpoint and validate the TLS certificate chain against your system trust store.
+2. **Identify the proof type.** Determine what attestation links this DID to a parent (e.g., a `verificationRelationship` method signed by a parent DID, an x.509 cert issued by a parent CA, a Sidetree operation, or a JWS produced by the parent over the child's DID Doc).
+3. **Recurse on the parent.** Repeat from step 1 with the parent's DID. Terminate when you reach either:
+   - a DID whose verification method matches a configured trust anchor, or
+   - a self-signed root (acceptable only if pre-configured).
+4. **Apply constraints.** Reject the path if:
+   - any link's signature fails to verify,
+   - the chain length exceeds the configured maximum,
+   - any intermediate was revoked (checked via CRL/OCSP/Revocation registry),
+   - any intermediate's key was used outside its declared `validUntil`/`notAfter`,
+   - name constraints or policy constraints are violated (e.g., a `did:web:example.com` issuer claiming authority over `did:web:evil.example.org`).
+5. **Bind to context.** A trust path by itself is not a complete authorization decision; bind the result to the operation being authorized (issuing a credential, accessing a resource, signing a message). Path validation must be repeated for each new context; cached trust decisions must carry an expiry.
 
-For each candidate path P = [n0, n1, ..., nk]:
+## Worked Example: did:key leaf signed by did:web issuer
 
-1. **Anchor check**: if n0 is not in the local TA set, discard P.
-   If multiple paths are considered, prefer the one with the smallest k
-   that still passes all checks (RFC 5280 "shortest valid chain"
-   heuristic) unless local policy says otherwise.
-2. **Path length**: require `k <= PLC`. If PLC is 0, only direct
-   trust from a TA is allowed.
-3. **Signature check**: for each i in [0, k-1], verify the signature
-   over ni+1's subject material using ni's public key. Signature
-   failures are fatal; do not fall back to weaker algorithms.
-4. **Key usage / capability check**: each hop must be authorized to
-   delegate to the next. In X.509 this is basicConstraints CA=true and
-   keyUsage keyCertSign. In DID/VC land this is the `capabilityDelegation`
-   verification method relationship or a `delegate` proof purpose.
-5. **Validity period**: each intermediate credential must be valid at
-   the validation time. If any cert in the path is expired or not yet
-   valid, the path is invalid; do not skip the node.
-6. **Revocation check**: each intermediate credential must not be
-   revoked at validation time. Use OCSP / CRL for X.509, statuslist
-   / bitstring for VC, or tombstone blocks for blockchain-anchored
-   DIDs. Caches are acceptable if fresher than the local freshness
-   bound (default 24h for OCSP, configurable).
-7. **Critical extensions / required fields**: any policy-required
-   extension or VC term (e.g., `iss`, `aud`, `proofPurpose`) that is
-   missing or contradictory fails the path.
-8. **Final subject check**: the terminal node must bind the key or
-   identifier the caller asked about. Reject if there is ambiguity
-   (e.g., two distinct keys under one DID with no disambiguation hint).
+Scenario: a verifier holds trust anchor `did:key:z6Mki...ROOT`. It receives a presentation from leaf `did:key:z6Mkj...LEAF`. The leaf's DID Doc contains a `verificationMethod` referencing the leaf's own key, plus an `assertionMethod` relationship. However, the leaf's DID Doc was signed (via detached JWS) by `did:web:issuer.example.com`. To validate the path:
 
-The path is accepted only if every step passes.
+1. Fetch `https://issuer.example.com/.well-known/did.json` over TLS. Validate TLS chain to a trusted CA.
+2. Verify the JWS over the leaf DID Doc using issuer's `assertionMethod` key. Check JWS header `alg` against your algorithm allow-list (see `sig_algo_agility.md`). Reject `none`, `HS*`, and any RS/PS variant with <2048-bit modulus.
+3. Confirm the issuer's DID Doc is itself signed or attested by `did:key:z6Mki...ROOT` (e.g., via an `alsoKnownAs` + cross-certification JWS, or because the issuer's verification method equals the root, or the root appears as a trusted parent in a local registry).
+4. Check policy: does the root authorize `issuer.example.com` to mint credentials in this namespace? If the root carries a published registry of authorized issuers, look up `issuer.example.com` and confirm the entry is not revoked.
+5. Compute and cache the path: `[LEAF -> issuer.example.com -> ROOT]`, length 2, valid for the JWS expiry.
 
-## 4. Common Failure Modes
+## Common Failure Modes
 
-- **Loops**: a path that revisits a node is invalid; bound k and
-  require a visited set.
-- **Cross-certificate confusion**: when two PKIs cross-sign, a path
-  may use the cross-cert in either direction; pick the one whose
-  policies are compatible with the target usage.
-- **Algorithm mismatch downgrades**: a TA may be RSA while an
-  intermediate is Ed25519. This is allowed only if both are in the
-  verifier's algorithm policy; never silently drop the Ed25519 hop.
-- **Delegation amplification**: a delegated VC that grants broader
-  authority than its issuer held. Always intersect delegated scope
-  with issuer scope.
-- **Stale OCSP**: cached responses older than `nextUpdate` (or 24h
-  if `nextUpdate` absent) must be re-fetched; treat network failure as
-  soft-fail only if local policy explicitly permits it.
+- **Permissive resolvers**: a resolver that returns *some* DID Doc without verifying the response (e.g., HTTP-only `did:web`, or `did:dns` without DNSSEC) lets an attacker substitute their own document. Always require signed or transport-authenticated resolution.
+- **Path substitution**: a verifier that accepts the *shortest* path or *any* valid path can be tricked by an attacker who controls a different branch of the graph. Require a specific policy binding (e.g., "issuance must be via the issuer registered for namespace X") rather than "any valid path to root".
+- **Revocation blindness**: a valid chain to a non-revoked root is still invalid if any intermediate was revoked after signing. CRL/OCSP/registry freshness is part of path validation, not a separate step.
+- **Algorithm agility drift**: a path built with Ed25519 may become unverifiable after a verifier upgrades to forbid a deprecated algorithm used by an intermediate. Carry algorithm metadata with each link and reject early at construction time.
+- **Replay across contexts**: a trust path proven for "read access" does not imply "write access" or "credential issuance". Bind paths to operations at validation time, not at issue time.
 
-## 5. Worked Example (DID / VC)
+## Verification Hook (sketch)
 
-Suppose `did:example:root` is a TA, and it issues a
-`CapabilityDelegation` credential to `did:example:intermediate`. That
-intermediate in turn issues a `VerifiableCredential` to
-`did:example:user` with a public key `K_user`.
+The offline verifier in `docs/offline_signature_verifier.py` is intentionally limited to one-link checks. Path validation cannot be offline-only; it requires at least one of: a local copy of trust anchors, a CRL/OCSP responder, or an online resolver. Recommended layering:
 
-Path:
-1. n0 = TA `did:example:root` — present in local anchors.
-2. n1 = intermediate's DID doc, signed by root. Verify the linked
-   domain proof or DID rotation signature. Capability delegation VC
-   has `proofPurpose: capabilityDelegation`, signed by root.
-3. n2 = user's DID doc, signed by intermediate via a `capabilityInvocation`
-   or delegated authentication proof.
+1. **Offline**: verify each individual signature with `offline_signature_verifier.py`.
+2. **Online (issuer resolution)**: fetch issuer DID Docs via TLS-authenticated HTTPS.
+3. **Online (revocation)**: query CRLs or the method-specific revocation registry.
+4. **Local (policy)**: apply name/path-length/algorithm constraints from configuration.
 
-Checks: TA present, signatures valid, proof purposes correct, no
-expiry, no revocation on either credential. Output: `VALID`, subject
-`did:example:user` with key `K_user` and the intersection of scopes
-from both credentials.
+A complete reference implementation should chain these layers in that order, fail closed if any layer is unavailable, and log each link's verification result so a path can be audited after the fact.
 
-## 6. Reason Codes (for logging and audit)
+## See Also
 
-- `ANCHOR_NOT_FOUND`
-- `PATH_TOO_LONG`
-- `SIGNATURE_INVALID`
-- `KEY_USAGE_FORBIDDEN`
-- `EXPIRED`
-- `NOT_YET_VALID`
-- `REVOKED`
-- `REQUIRED_FIELD_MISSING`
-- `ALGORITHM_DISALLOWED`
-- `DELEGATION_AMPLIFICATION`
-- `LOOP_DETECTED`
-- `SUBJECT_AMBIGUOUS`
-
-Always log the reason code, the path that failed, and the validation
-time. Treat logs as tamper-evident when used in incident response.
+- `docs/signature_verification_playbook.md` — single-signature verification.
+- `docs/federated_trust_roots.md` — how trust anchors are chosen and rotated.
+- `docs/sig_algo_agility.md` — algorithm allow-lists for verification.
+- `docs/did_method_evaluation.md` — method-specific resolution and revocation behavior.
 
 <!-- Authored by Technocore agent DID did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX -->
