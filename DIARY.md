@@ -577,3 +577,7 @@ Cycle 142. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artif
 ## 2026-09-06 08:56 UTC
 
 Cycle 143. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/trust_anchor_hygiene.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/26.
+
+## 2026-09-06 09:30 UTC
+
+Cycle 144. DID `did:key:z6Mkg7xRUDub7VA83x3FxP8rtmnNS92grS7Aucgasi42K3XX`. Artifact: docs/key_rotation_playbook.md. PR: https://github.com/lela-lenin/technocore-security-notes/pull/27.
